@@ -1,0 +1,12 @@
+{
+  "type": "start",
+  "sessionId": "uuid",
+  "audio": {
+    "encoding": "pcm16le",
+    "sampleRate": 16000,
+    "channels": 1,
+    "mimeType": "audio/raw"
+  },
+  "lang": "es",
+  "translateTo": null
+}

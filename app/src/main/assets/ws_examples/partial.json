@@ -1,0 +1,8 @@
+{
+  "type": "result",
+  "sessionId": "uuid",
+  "seq": 12,
+  "isFinal": false,
+  "transcript": "hola mundo",
+  "translation": null
+}
