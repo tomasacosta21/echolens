@@ -5,24 +5,23 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ar.edu.unrn.echolens.ai.SttRepository
 import ar.edu.unrn.echolens.ai.SttWsRepo
-import ar.edu.unrn.echolens.ai.ws.AudioSpec
 import ar.edu.unrn.echolens.ai.ws.SttWebSocketClient
 import ar.edu.unrn.echolens.ble.BleClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 class SttBleViewModel : ViewModel() {
 
     private var bleClient: BleClient? = null
 
-    // Endpoint WS del servicio (poné el host real cuando esté)
     private val sttRepo: SttRepository =
-        SttWsRepo(SttWebSocketClient(wsUrl = "wss://TU_SERVICIO/ws/stt"))
+        SttWsRepo(
+            SttWebSocketClient(
+                "wss://supersensitive-eloisa-exuberant.ngrok-free.dev/ws/audio"
+            )
+        )
 
-    private var sessionId: String? = null
-    private var seq: Int = 0
     private var bleJob: Job? = null
     private var wsJob: Job? = null
 
@@ -38,40 +37,25 @@ class SttBleViewModel : ViewModel() {
         sttRepo.close()
     }
 
-    /**
-     * Inicia pipeline BLE -> WS -> BLE
-     */
-    fun startStreaming(
-        lang: String = "es",
-        translateTo: String? = null,
-        spec: AudioSpec = AudioSpec()
-    ) {
+    /** Inicia pipeline BLE -> WS -> BLE */
+    fun startStreaming() {
         val ble = bleClient ?: return
 
-        sessionId = UUID.randomUUID().toString()
-        seq = 0
-
         sttRepo.connect()
-        sttRepo.start(sessionId!!, spec, lang, translateTo)
 
-        // 1) BLE -> WS (chunks)
+        // 1) BLE -> WS (manda bytes PCM)
         bleJob = viewModelScope.launch {
             ble.audioFlow.collectLatest { chunk ->
-                sttRepo.sendChunk(sessionId!!, seq++, chunk)
+                sttRepo.sendChunk(chunk)
             }
         }
 
-        // 2) WS -> BLE (resultados)
+        // 2) WS -> BLE (manda texto a lentes)
         wsJob = viewModelScope.launch {
-            sttRepo.results().collectLatest { result ->
-                val textToSend = result.translation ?: result.transcript
+            sttRepo.results().collectLatest { msg ->
+                val textToSend = msg.text
                 if (!textToSend.isNullOrBlank()) {
                     ble.sendTextToEsp(textToSend)
-                }
-
-                if (result.isFinal) {
-                    // opcional: cerrar sesión si backend marca final
-                    stopStreaming()
                 }
             }
         }
@@ -85,11 +69,8 @@ class SttBleViewModel : ViewModel() {
     }
 
     fun stopStreaming() {
-        val id = sessionId ?: return
-        sttRepo.end(id)
-        sttRepo.close()
         bleJob?.cancel()
         wsJob?.cancel()
-        sessionId = null
+        sttRepo.close()
     }
 }

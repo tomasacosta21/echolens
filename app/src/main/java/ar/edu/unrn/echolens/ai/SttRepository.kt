@@ -1,17 +1,12 @@
 package ar.edu.unrn.echolens.ai
 
-import ar.edu.unrn.echolens.ai.ws.AudioSpec
-import ar.edu.unrn.echolens.ai.ws.ResultMsg
+import ar.edu.unrn.echolens.ai.ws.TranscriptionMsg
 import kotlinx.coroutines.flow.Flow
 
 interface SttRepository {
     fun connect()
     fun close()
-
-    fun start(sessionId: String, spec: AudioSpec, lang: String, translateTo: String? = null)
-    fun sendChunk(sessionId: String, seq: Int, bytes: ByteArray)
-    fun end(sessionId: String)
-
-    fun results(): Flow<ResultMsg>
+    fun sendChunk(pcmBytes: ByteArray)
+    fun results(): Flow<TranscriptionMsg>
     fun errors(): Flow<String>
 }
