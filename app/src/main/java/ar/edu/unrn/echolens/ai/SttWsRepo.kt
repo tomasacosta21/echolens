@@ -24,6 +24,7 @@ class SttWsRepo(
         return wsClient.errorsFlow()
     }
 
+
     override fun close() {
         wsClient.close()
     }
